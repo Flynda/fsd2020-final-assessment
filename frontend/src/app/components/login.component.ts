@@ -25,12 +25,11 @@ export class LoginComponent implements OnInit {
 
   login() {
     const loginDetails: Login = {
-      username: this.loginForm.get('username').value,
+      username: this.loginForm.get('username').value.toLowerCase(),
       password: this.loginForm.get('password').value
     }
     this.authSvc.authentication(loginDetails)
       .then(result => {
-        console.info('login result: ', result)
         if (result) {
           this.router.navigate(['/'])
         } else {

@@ -44,7 +44,6 @@ export class ListComponent implements OnInit {
   }
 
   next() {
-    console.info(this.listCount)
     this.authSvc.getListStartingWith(this.startingWith, this.page + 1, this.listCount)
       .then(r => {
         this.renderResults(r)

@@ -26,6 +26,10 @@ const SQL_GET_BOOK_DETAILS = 'select * from book2018 where book_id = ?'
 const SQL_ADD_TO_DATABASE = `INSERT INTO book2018 (book_id, title, authors, description, edition, format, pages, genres, image_url, user_id) VALUES
 (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 const SQL_GET_LAST_BOOK_ID = ` select book_id from book2018 ORDER BY book_id DESC LIMIT 1;`
+const SQL_CHECK_IF_BOOK_IS_IN_USER_FAVORITES = `select id from favorites where user_id = ? and book_id = ?`
+const SQL_ADD_TO_FAVORITES = `insert into favorites (user_id, book_id) values (?, ?)`
+const SQL_REMOVE_FROM_FAVORITES = `delete from favorites where id = ?`
+const SQL_SHOW_ALL_USER_FAVORITES = ``
 
 const SQL_LIMIT = 10
 
@@ -60,6 +64,9 @@ const bookDetails = mkQuery(SQL_GET_BOOK_DETAILS, pool)
 const checkUserPassword = mkQuery(SQL_CHECK_USER_PASSWORD, pool)
 const getLastBookId = mkQuery(SQL_GET_LAST_BOOK_ID, pool)
 const addToSQLDb = mkQuery(SQL_ADD_TO_DATABASE, pool)
+const addToFavTable = mkQuery(SQL_ADD_TO_FAVORITES, pool)
+const checkIfFav = mkQuery(SQL_CHECK_IF_BOOK_IS_IN_USER_FAVORITES, pool)
+const deleteFromFavTable = mkQuery(SQL_REMOVE_FROM_FAVORITES, pool)
 
 const s3 = new AWS.S3({
     endpoint: new AWS.Endpoint(process.env.S3_HOSTNAME),
@@ -149,17 +156,17 @@ passport.use(
     )
 )
 
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:3000/auth/google/callback"
-  },
-  function(accessToken, refreshToken, profile, done) {
-       User.findOrCreate({ googleId: profile.id }, function (err, user) {
-         return done(err, user);
-       });
-  }
-));
+// passport.use(new GoogleStrategy({
+//     clientID: process.env.GOOGLE_CLIENT_ID,
+//     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//     callbackURL: "http://localhost:3000/auth/google/callback"
+//   },
+//   function(accessToken, refreshToken, profile, done) {
+//        User.findOrCreate({ googleId: profile.id }, function (err, user) {
+//          return done(err, user);
+//        });
+//   }
+// ));
 
 const localStrategyAuth = authMiddleware(passport)
 
@@ -226,23 +233,54 @@ app.post('/login',
         }
 )
 
-app.get('/auth/google',
-  passport.authenticate('google', { scope:
-      [ 'email', 'profile' ] }
-));
+// app.get('/auth/google',
+//   passport.authenticate('google', { scope:
+//       [ 'email', 'profile' ] }
+// ));
 
-app.get( '/auth/google/callback',
-    passport.authenticate( 'google', {
-        successRedirect: '/auth/google/success',
-        failureRedirect: '/auth/google/failure'
-}));
+// app.get( '/auth/google/callback',
+//     passport.authenticate( 'google', {
+//         successRedirect: '/auth/google/success',
+//         failureRedirect: '/auth/google/failure'
+// }));
 
 // Authorization: Bearer <token>
-app.get('/protected/fav', 
+app.post('/protected/fav', 
     checkAuth,
-    (req, resp) => {
-        resp.status(200)
-        resp.json({ meaning_of_life: 42 })
+    async (req, resp) => {
+        const userId = req.token.data.userId
+        const bookId = req.body.bookId
+        console.info(bookId)
+        try {
+            const addToFav = await addToFavTable([userId, bookId])
+            console.info('added? ', addToFav)
+            resp.status(200)
+            resp.json({ message: 'Added' })
+        } catch (err) {
+            resp.status(500)
+            resp.type('application/json')
+            resp.json({error: err})
+        }
+    }
+)
+
+app.delete('/protected/removeFav', 
+    checkAuth,
+    async (req, resp) => {
+        console.info('params? ', req.query['favId'])
+        const favId = parseInt(req.query['favId'])
+        console.info('to delete, favid: ', favId)
+        console.info('type of: ', typeof(favId))
+        try {
+            const rmFav = await deleteFromFavTable([favId])
+            console.info('deleted? ', rmFav)
+            resp.status(200)
+            resp.json({ message: 'Deleted' })
+        } catch (err) {
+            resp.status(500)
+            resp.type('application/json')
+            resp.json({error: err})
+        }
     }
 )
 
@@ -313,62 +351,75 @@ app.post('/protected/share',
 app.get('/list/:id', 
     checkAuth,
     async(req, resp) => {
-    const list_id = req.params['id']
-    const page = parseInt(req.query['page'])
-    let totalInList = parseInt(req.query['total']) || 0
-    const offset = (page - 1) * SQL_LIMIT
-    try {
-        const booklist = await getBookList([`${list_id}%`, req.token.data.userId, SQL_LIMIT, offset])
-        if (!totalInList) {
-            const listTotal = await listCount([`${list_id}%`])
-            totalInList = listTotal[0]['listCount']
-        }
-        console.info('number:' , totalInList)
-        resp.status(200)
-        resp.type('application/json')
-        resp.json({
-            results: booklist, 
-            limit: SQL_LIMIT, 
-            total: totalInList
-        })
-    } catch (e) {
-        resp.status(500)
-        resp.type('application/json')
-        resp.json({error: e})
-    }
-})
-
-app.get('/book/:book_id', async(req, resp) => {
-    const book_id = req.params['book_id']
-    try {
-        const results = await bookDetails([book_id])
-        console.info(results)
-        if (results.length <= 0) {
-            resp.status(404)
+        const list_id = req.params['id']
+        const page = parseInt(req.query['page'])
+        let totalInList = parseInt(req.query['total']) || 0
+        const offset = (page - 1) * SQL_LIMIT
+        try {
+            const booklist = await getBookList([`${list_id}%`, req.token.data.userId, SQL_LIMIT, offset])
+            if (!totalInList) {
+                const listTotal = await listCount([`${list_id}%`])
+                totalInList = listTotal[0]['listCount']
+            }
+            console.info('number:' , totalInList)
+            resp.status(200)
             resp.type('application/json')
-            resp.json({error: `${book_id} does not exist in the database.`})
-            return
+            resp.json({
+                results: booklist, 
+                limit: SQL_LIMIT, 
+                total: totalInList
+            })
+        } catch (e) {
+            resp.status(500)
+            resp.type('application/json')
+            resp.json({error: e})
         }
-        resp.status(200)
-        resp.type('application/json')
-        resp.json({
-            bookId: results[0].book_id,
-            title: results[0].title,
-            authors: results[0].authors.split('|').join(', '),
-            summary: results[0].description,
-            pages: results[0].pages,
-            rating: results[0].rating,
-            ratingCount: results[0].rating_count,
-            genre: results[0].genres.split('|').join(', '),
-            image_url: results[0].image_url || '/assets/no_image.png'
-        })
-
-    } catch (e) {
-        resp.status(500)
-        resp.type('assplication/json')
-        resp.json({error: e})
     }
-})
+)
+
+app.get('/book/:book_id', 
+    checkAuth, 
+    async(req, resp) => {
+        const book_id = req.params['book_id']
+        try {
+            const results = await bookDetails([book_id])
+            console.info(results)
+            if (results.length <= 0) {
+                resp.status(404)
+                resp.type('application/json')
+                resp.json({error: `${book_id} does not exist in the database.`})
+                return
+            }
+            const checkFav = await checkIfFav([req.token.data.userId, book_id])
+            console.info('what is here?', checkFav)
+            console.info('checking length? ', !!checkFav.length)
+            let favId = 0
+            if (checkFav.length) {
+                favId = checkFav[0].id
+            }
+            console.info('what will favid show? ', favId)
+            resp.status(200)
+            resp.type('application/json')
+            resp.json({
+                bookId: results[0].book_id,
+                title: results[0].title,
+                authors: results[0].authors.split('|').join(', '),
+                summary: results[0].description,
+                pages: results[0].pages,
+                rating: results[0].rating,
+                ratingCount: results[0].rating_count,
+                genre: results[0].genres.split('|').join(', '),
+                image_url: results[0].image_url || '/assets/no_image.png',
+                fav: (!!checkFav.length),
+                favId: favId
+            })
+        } catch (e) {
+            resp.status(500)
+            resp.type('assplication/json')
+            resp.json({error: e})
+        }
+    }
+)
 
 app.get('/review/:title', async (req, resp) => {
     const title = req.params['title']

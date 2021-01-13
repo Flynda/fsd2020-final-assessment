@@ -1,14 +1,14 @@
-<nav class="d-flex justify-content-between mb-3">
-    <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+<nav class="d-flex justify-content-end mb-3">
+    <!-- <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button> -->
     <button class="btn btn-outline-primary" (click)="toggleBtn()" [innerHTML]="btnTxt"></button>
 </nav>
 
-<div class="card" style="width: 50vw;">
+<div class="card" style="width: 70vw;">
     <div class="card-header">Bookshelf</div>
     <div class="card-body">
-        <table style="width: 100%">
+        <table>
             <tr *ngFor="let array of alphabetArray">
-                <td *ngFor="let a of array" style="width: 20%;">
+                <td *ngFor="let a of array">
                     <button type="button" class="btn btn-primary btn-lg btn-block" [routerLink]="[ '/list', a ]">{{a}}</button>
                 </td>
             </tr>

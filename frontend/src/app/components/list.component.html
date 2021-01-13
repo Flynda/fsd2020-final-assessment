@@ -14,6 +14,10 @@
     </tbody>
 </table>
 
+<div *ngIf="!listCount">
+    <h4>Sorry, no titles starting with {{startingWith}} were found. Would you like to <a [routerLink]="[ '/suggest' ]">contribute</a>?</h4>
+</div>
+
 <div class="d-flex justify-content-between">
     <div *ngIf="page > 1">
         <button type="button" class="btn btn-info mr-3" (click)="prev()">Prev</button>

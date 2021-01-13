@@ -24,6 +24,8 @@ export interface BookDetails {
     ratingCount: number
     genre: string
     image_url: string
+    fav: boolean
+    favId: number
 }
 
 export interface BookReview {

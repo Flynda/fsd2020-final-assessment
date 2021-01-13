@@ -10,26 +10,40 @@ export class DatabaseService{
 
     constructor(private http: HttpClient) { }
 
-    async getListStartingWith(param: string, pageNo?: number, totalBooks?: number): Promise<BookPages> {
-        const page = pageNo || 1
-        const total = totalBooks || 0
-        const queryString = (new HttpParams())
-                        .set('page', page.toString())
-                        .set('total', total.toString())
-        const results = await this.http.get<BookResult>(`${this.SERVER}/list/${param.toLowerCase()}`, {params: queryString})
-                        .toPromise()
-        return {
-            results: results,
-            page: page
-        }
-    }
+    // async getListStartingWith(param: string, pageNo?: number, totalBooks?: number): Promise<BookPages> {
+    //     const page = pageNo || 1
+    //     const total = totalBooks || 0
+    //     const queryString = (new HttpParams())
+    //                     .set('page', page.toString())
+    //                     .set('total', total.toString())
+    //     try {
+    //         const results = await this.http.get<BookResult>(`${this.SERVER}/list/${param.toLowerCase()}`, {params: queryString})
+    //                     .toPromise()
+    //         return {
+    //             results: results,
+    //             page: page
+    //         }
+    //     } catch (err) {
+    //         console.error(err);
+    //     }
 
-    async getBookDetails(book_id: string): Promise<BookDetails> {
-        return await this.http.get<BookDetails>(`${this.SERVER}/book/${book_id}`)
-                        .toPromise()
-    }
+    // }
+
+    // async getBookDetails(book_id: string): Promise<BookDetails> {
+    //     try {
+    //         return await this.http.get<BookDetails>(`${this.SERVER}/book/${book_id}`)
+    //                 .toPromise()    
+    //     } catch (err) {
+    //         console.error(err)    
+    //     }
+    // }
 
     async getBookReviews(title: string): Promise<BookReviewDetails> {
-        return await this.http.get<BookReviewDetails>(`${this.SERVER}/review/${title}`).toPromise()
+        try {
+            return await this.http.get<BookReviewDetails>(`${this.SERVER}/review/${title}`)
+                    .toPromise()        
+        } catch (err) {
+            console.error(err)
+        }
     }
 }

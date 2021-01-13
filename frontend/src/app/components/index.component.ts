@@ -28,7 +28,6 @@ export class IndexComponent implements OnInit {
 
   ngOnInit(): void {
     const loginStatus = this.authSvc.isLogin()
-    console.info(loginStatus)
     if (loginStatus) {
       this.btnTxt = "Logout"
     } else {

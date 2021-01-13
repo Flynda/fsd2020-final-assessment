@@ -7,14 +7,14 @@
 <form [formGroup]="loginForm" (ngSubmit)="login()">
     <div class="form-group">
         <label for="username">Username</label>
-        <input type="text" formControlName="username" id="username" placeholder="Username" class="form-control" [ngClass]="{'is-invalid': errorMessage}">
+        <input type="text" formControlName="username" id="username" placeholder="Username" class="form-control" [ngClass]="{'is-invalid': errorMessage}" autocomplete="username">
         <div class="invalid-feedback" *ngIf="errorMessage">
 			{{ errorMessage }}
 		</div>
     </div>
     <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" formControlName="password" id="password" placeholder="Password" class="form-control" [ngClass]="{'is-invalid': errorMessage}">
+        <input type="password" formControlName="password" id="password" placeholder="Password" class="form-control" [ngClass]="{'is-invalid': errorMessage}" autocomplete="current-password">
     </div>
     <div class="d-flex justify-content-end">
         <button type="submit" [disabled]="loginForm.invalid" class="btn btn-lg btn-success mt-3">Login</button>

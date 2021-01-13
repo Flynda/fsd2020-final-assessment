@@ -29,9 +29,13 @@ by
         <p>
             <a [routerLink]="[ '/review', book_details.title ]">Find Review</a>
         </p>
-        <!-- <button class="btn btn-warning" (click)="fav(book_details.bookId)">
-			<span style="margin-right: 5px !important;">Add to Bookmark</span>
+        <button (click)="toggleFavState()" *ngIf="favState" class="btn btn-warning">
+            <i class="fas fa-star"></i>
+            <span style="margin-left: 5px !important;">Remove from Bookmark</span>
+        </button>
+        <button (click)="toggleFavState()" *ngIf="!favState" class="btn btn-warning">
             <i class="far fa-star"></i>
-		</button> -->
+            <span style="margin-left: 5px !important;">Add to Bookmark</span>
+        </button>
     </div>
 </div>

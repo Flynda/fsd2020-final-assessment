@@ -26,32 +26,26 @@ export class SignupComponent implements OnInit {
 
   signup(){
     if (this.signupForm.get('password').value != this.signupForm.get('password2').value) {
-      this.errorMessage = 'Please check your password is entered correctly. Password and Repeat password must be the same'
+      this.errorMessage = 'Please check your password is repeated correctly.'
       console.error(this.errorMessage)
     }
     const signupDetails: SignUp = {
-      username: this.signupForm.get('username').value,
+      username: this.signupForm.get('username').value.toLowerCase(),
       password: this.signupForm.get('password').value,
       email: this.signupForm.get('email').value
     }
-
-    // const loginDetails: Login = {
-    //   username: this.loginForm.get('username').value,
-    //   password: this.loginForm.get('password').value
-    // }
-    // this.authSvc.authentication(loginDetails)
-    //   .then(result => {
-    //     console.info('login result: ', result)
-    //     if (result) {
-    //       this.router.navigate(['/'])
-    //     } else {
-    //       this.errorMessage = this.authSvc.errorMessage
-    //     }
-        
-    //   })
-    //   .catch(err => {
-    //     console.error('There is an error: ', err)
-    //   })
+    this.authSvc.signUp(signupDetails)
+      .then(result => {
+        // console.info('login result', result)
+        if (result) {
+          this.router.navigate(['/'])
+        } else {
+          this.errorMessage = this.authSvc.errorMessage
+        }
+      })
+      .catch(err => {
+        console.error('There is an error: ', err)
+      })
 
   }
 

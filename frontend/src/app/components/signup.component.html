@@ -9,11 +9,11 @@
 
 <form [formGroup]="signupForm" (ngSubmit)="signup()">
     <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" formControlName="username" id="username" placeholder="Username" class="form-control" [ngClass]="{'is-invalid': errorMessage}">
         <div class="invalid-feedback" *ngIf="errorMessage">
 			{{ errorMessage }}
 		</div>
+        <label for="username">Username</label>
+        <input type="text" formControlName="username" id="username" placeholder="Username" class="form-control" [ngClass]="{'is-invalid': errorMessage}">
     </div>
     <div class="form-group">
         <label for="password">Password</label>
