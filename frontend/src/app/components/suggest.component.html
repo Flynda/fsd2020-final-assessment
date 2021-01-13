@@ -1,0 +1,48 @@
+<nav class="d-flex justify-content-between mb-3">
+    <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+    <button class="btn btn-danger" (click)="logout()">Logout</button>
+</nav>
+
+<h2>Suggest a Book</h2>
+
+<form [formGroup]="bookForm" (ngSubmit)="upload()">
+    <div class="form-group">
+        <label for="title">Title</label>
+        <input type="text" formControlName="title" id="title" placeholder="Title" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="authors">Authors</label>
+        <input type="text" formControlName="authors" id="authors" placeholder="Authors" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="genres">Genres</label>
+        <input type="text" formControlName="genres" id="genres" placeholder="Genres" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="description">Synopsis</label>
+        <textarea formControlName="description" id="description" rows="10" class="form-control" placeholder="Official synopsis (found on the back cover or book flap)"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="format">Format</label>
+        <input type="text" formControlName="format" id="format" class="form-control" list="formatList" placeholder="Format of the book">
+        <datalist id="formatList">
+            <option *ngFor="let each of formatList" value="{{each}}"></option>
+        </datalist>
+    </div>
+
+    <div class="form-group">
+        <label for="edition">Edition</label>
+        <input type="text" formControlName="edition" id="edition" placeholder="Edition" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="pages">Pages</label>
+        <input type="number" formControlName="pages" id="pages" placeholder="Total number of pages in the book" class="form-control">
+    </div>
+    <div class="form-group">
+        <label for="image">Book Cover</label><br>
+        <input type="file" formControlName="bookcover-img" id="image" accept="image/*" #imageFile>
+    </div>
+    <div class="d-flex justify-content-end">
+        <button type="submit" [disabled]="bookForm.invalid" class="btn btn-lg btn-success mt-3">Suggest a book!</button>
+    </div>
+</form>

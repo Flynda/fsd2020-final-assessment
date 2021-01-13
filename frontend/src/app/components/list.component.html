@@ -1,0 +1,24 @@
+<nav class="d-flex justify-content-between mb-3">
+    <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+    <button class="btn btn-danger" (click)="logout()">Logout</button>
+</nav>
+
+<table class="table mt-4">
+    <thead>
+        <th scope="col">Books starting with {{startingWith}}</th>
+    </thead>
+    <tbody *ngFor="let b of bookList">
+        <tr [routerLink]="[ '/book', b['book_id'] ]">
+            <td>{{b.title}}</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="d-flex justify-content-between">
+    <div *ngIf="page > 1">
+        <button type="button" class="btn btn-info mr-3" (click)="prev()">Prev</button>
+    </div>
+    <div *ngIf="page < totalPages">
+        <button type="button" class="btn btn-info float-right" (click)="next()">Next</button>
+    </div>
+</div>

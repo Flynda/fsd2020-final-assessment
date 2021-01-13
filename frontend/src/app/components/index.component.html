@@ -1,0 +1,26 @@
+<nav class="d-flex justify-content-between mb-3">
+    <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+    <button class="btn btn-outline-primary" (click)="toggleBtn()" [innerHTML]="btnTxt"></button>
+</nav>
+
+<div class="card" style="width: 50vw;">
+    <div class="card-header">Bookshelf</div>
+    <div class="card-body">
+        <table style="width: 100%">
+            <tr *ngFor="let array of alphabetArray">
+                <td *ngFor="let a of array" style="width: 20%;">
+                    <button type="button" class="btn btn-primary btn-lg btn-block" [routerLink]="[ '/list', a ]">{{a}}</button>
+                </td>
+            </tr>
+            <tr *ngFor="let array of numArray">
+                <td *ngFor="let a of array">
+                    <button type="button" class="btn btn-info btn-lg btn-block" [routerLink]="[ '/list', a]">{{a}}</button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end">
+    <button type="button" [routerLink]="[ '/suggest' ]" class="btn btn-lg btn-success mt-3">Suggest a book!</button>
+</div>

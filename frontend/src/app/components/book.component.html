@@ -1,0 +1,37 @@
+<nav class="d-flex justify-content-between mb-3">
+    <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+    <button class="btn btn-danger" (click)="logout()">Logout</button>
+</nav>
+
+<h3 class="mt-3">
+    {{book_details.title}}
+</h3>
+by 
+<i>
+    {{book_details.authors}}
+</i>
+
+<div class="row">
+    <div class="col">
+        <img src="{{book_details.image_url}}" alt="Book cover">
+        <br>
+        Pages: {{book_details.pages}}
+        <br>
+        Rating: {{book_details.rating}} ({{book_details.ratingCount}})
+        <br>
+        Genres:
+        <br>
+        {{book_details.genre}}
+        <br>
+        Synopsis:
+        <br>
+        {{book_details.summary}}
+        <p>
+            <a [routerLink]="[ '/review', book_details.title ]">Find Review</a>
+        </p>
+        <!-- <button class="btn btn-warning" (click)="fav(book_details.bookId)">
+			<span style="margin-right: 5px !important;">Add to Bookmark</span>
+            <i class="far fa-star"></i>
+		</button> -->
+    </div>
+</div>
