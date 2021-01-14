@@ -43,9 +43,6 @@ export class LoginComponent implements OnInit {
   }
 
   socialSignIn(socialProvider: string){
-    window.open(`/${socialProvider}`,"mywindow","location=1,status=1,scrollbars=1, width=800,height=800");
-    let listener = window.addEventListener('message', (message) => {
-      //message will contain google user and details
-    });
+    this.authSvc.googleAuth(socialProvider)
   }
 }

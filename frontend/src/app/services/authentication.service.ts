@@ -51,8 +51,15 @@ export class AuthenticationService implements CanActivate {
         }
     }
 
-    authGoogle(login) {
-        
+    googleAuth(socialProvider: string){
+        window.open(`${this.SERVER}/auth/${socialProvider}`,"mywindow","location=1,status=1,scrollbars=1, width=800,height=800");
+        let listener = window.addEventListener('message', (message) => {
+         //message will contain google user and details
+         console.info('message??', message)
+            this.token = message.data.token
+            if (this.token != '')
+                this.router.navigate(['/'])
+       });  
     }
 
     isLogin(){
