@@ -4,16 +4,13 @@
 	</div>
 </div>
 
-<!-- <img src="http://www.sixsigmatrainingfree.com/uploads/2/1/7/9/21795380/work-in-progress-wip.jpg" alt="">
-<i>Sorry, we are still setting this up. Please come back later.</i> -->
-
 <form [formGroup]="signupForm" (ngSubmit)="signup()">
     <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" formControlName="username" id="username" placeholder="Username" class="form-control" [ngClass]="{'is-invalid': errorMessage}">
         <div class="invalid-feedback" *ngIf="errorMessage">
 			{{ errorMessage }}
 		</div>
-        <label for="username">Username</label>
-        <input type="text" formControlName="username" id="username" placeholder="Username" class="form-control" [ngClass]="{'is-invalid': errorMessage}">
     </div>
     <div class="form-group">
         <label for="password">Password</label>

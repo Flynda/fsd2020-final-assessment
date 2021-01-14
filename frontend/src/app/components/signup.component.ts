@@ -28,6 +28,7 @@ export class SignupComponent implements OnInit {
     if (this.signupForm.get('password').value != this.signupForm.get('password2').value) {
       this.errorMessage = 'Please check your password is repeated correctly.'
       console.error(this.errorMessage)
+      return;
     }
     this.errorMessage = ''
     const signupDetails: SignUp = {
