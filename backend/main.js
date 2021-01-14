@@ -20,7 +20,8 @@ const nytimes_apikey = process.env.NYTIMES_APIKEY || ''
 const TOKEN_SECRET = process.env.TOKEN_SECRET
 
 const SQL_CHECK_USER_PASSWORD = 'select id, user_id, email from user where user_id = ? and password = sha(?) and activated = 1'
-const SQL_CHECK_UNIQUE_USERNAME_EMAIL = `select id from user where user_id = ? and email = ?`
+const SQL_CHECK_UNIQUE_USERNAME = `select id from user where user_id = ?`
+const SQL_CHECK_UNIQUE_EMAIL = `select id from user where email = ?`
 const SQL_GET_TITLE_LIST = 'select book_id, title from book2018 where title like ? and (user_id is null or user_id = ?) order by title asc limit ? offset ?'
 const SQL_TOTAL_LIST = 'select count(*) as listCount from book2018 where title like ?'
 const SQL_GET_BOOK_DETAILS = 'select * from book2018 where book_id = ?'
@@ -77,7 +78,8 @@ const checkIfFav = mkQuery(SQL_CHECK_IF_BOOK_IS_IN_USER_FAVORITES, pool)
 const deleteFromFavTable = mkQuery(SQL_REMOVE_FROM_FAVORITES, pool)
 const userFav = mkQuery(SQL_SHOW_ALL_USER_FAVORITES, pool)
 const allUserSuggestions = mkQuery(SQL_GET_ALL_USER_SUGGESTIONS, pool)
-const checkUniqueUsernameEmail = mkQuery(SQL_CHECK_UNIQUE_USERNAME_EMAIL, pool)
+const checkUniqueUsername = mkQuery(SQL_CHECK_UNIQUE_USERNAME, pool)
+const checkUniqueEmail = mkQuery(SQL_CHECK_UNIQUE_EMAIL, pool)
 
 const s3 = new AWS.S3({
     endpoint: new AWS.Endpoint(process.env.S3_HOSTNAME),
@@ -234,7 +236,9 @@ const checkAuth = (req, resp, next) => {
 
 const sendEmail = async(newUser) => {
     const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: {
             user: process.env.SENDER_NAME,
             pass: process.env.SENDER_PW
@@ -254,11 +258,9 @@ const sendEmail = async(newUser) => {
         if (err) {
             console.error(err)
         } else {
-            console.info('Email sent: ' + info.response)
+            console.info('Email sent: ' + info)
         }
     })
-
-    console.log("Message sent: %s", info.messageId);
 }
 
 
@@ -309,18 +311,46 @@ app.post('/login',
 // }));
 
 
-app.post('/signup', async(req, resp) => {
+app.post('/signup', async(req, resp, next) => {
     const newUser = req.body
 
-    const newSignUp = await checkUniqueUsernameEmail([newUser.username, newUser.email])
-            if (newSignUp.length) {
-                resp.status(409)
-                resp.type('application/json')
-                resp.json({message: 'Username or email already exists.'})
-                return;
+    const userCheck = await checkUniqueUsername([newUser.username])
+    const emailCheck = await checkUniqueEmail([newUser.email])
+    console.info('new signup?', userCheck)
+    console.info('new signup?', emailCheck)
+        if (!!userCheck.length || !!emailCheck.length) {
+            resp.status(409)
+            resp.type('application/json')
+            resp.json({message: 'Username or email already exists.'})
+            return;
+        }
+    sendEmail(newUser)
+    // resp.status(202)
+    // resp.type('application/json')
+    // resp.json({message: 'Check email'})
+    next()
+    }, (req, resp) => {
+        // generate JWT token
+        const currentTime = (new Date()).getTime() / 1000
+        const token = jwt.sign({
+            sub: req.body.username,
+            iss: 'myapp',
+            ist: currentTime,
+            // nbf: currentTime + 30,
+            exp: currentTime + (60 * 60),
+            data: {
+                user: req.body.username,
+                // userId: req.user.userId,
+                user_email: req.body.email,
+                loginTime: currentTime
             }
+        }, TOKEN_SECRET)
 
-})
+        resp.status(200)
+        resp.type('application/json')
+        resp.json({ message: `Login in at ${new Date()}`, token})
+    }
+)
 
 // Authorization: Bearer <token>
 app.post('/protected/addFav', 
