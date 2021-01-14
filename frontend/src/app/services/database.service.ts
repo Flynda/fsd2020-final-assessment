@@ -6,7 +6,8 @@ import { AuthenticationService } from "./authentication.service";
 @Injectable()
 export class DatabaseService{
 
-    SERVER: string = 'http://localhost:3000'
+    // SERVER: string = 'http://localhost:3000'
+    SERVER: string = '/'
 
     constructor(private http: HttpClient) { }
 

@@ -6,7 +6,8 @@ import { Login, SignUp } from "../models/login.model";
 
 @Injectable()
 export class AuthenticationService implements CanActivate {
-    SERVER = 'http://localhost:3000'
+    SERVER: string = '/'
+    // SERVER = 'http://localhost:3000'
     private token = ''
     errorMessage: string = ''
     url;

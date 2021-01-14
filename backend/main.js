@@ -674,6 +674,8 @@ app.get('/review/:title', async (req, resp) => {
     }
 })
 
+app.use(express.static(__dirname + '/frontend'))
+
 const p0 = (async () => {
     const conn = await pool.getConnection()
     console.info('Pinging database...')
