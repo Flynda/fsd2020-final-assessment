@@ -23,7 +23,7 @@ const NEW_SECRET = process.env.NEW_SECRET
 
 const SQL_CHECK_USER_PASSWORD = 'select id, user_id, email from user where user_id = ? and password = sha(?) and activated = 1'
 const SQL_CHECK_UNIQUE_USERNAME = `select id from user where user_id = ?`
-const SQL_CHECK_UNIQUE_EMAIL = `select id from user where email = ?`
+const SQL_CHECK_UNIQUE_EMAIL = `select id, user_id from user where email = ?`
 const SQL_ADD_NEW_USER = `insert into user (user_id, password, email, temp_hash) values (?, sha(?), ?, ?)`
 const SQL_CHECK_VERIFICATION = 'select id, user_id, email from user where user_id = ? and temp_hash = ?'
 const SQL_UPDATE_VERIFICATION = 'UPDATE user SET activated = 1, temp_hash = null WHERE (user_id = ?)'
@@ -182,17 +182,16 @@ passport.use(
     )
 )
 
-// passport.use(new GoogleStrategy({
-//     clientID: process.env.GOOGLE_CLIENT_ID,
-//     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//     callbackURL: "http://localhost:3000/auth/google/callback"
-//   },
-//   function(accessToken, refreshToken, profile, done) {
-//        User.findOrCreate({ googleId: profile.id }, function (err, user) {
-//          return done(err, user);
-//        });
-//   }
-// ));
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/callback"
+  },
+  function(accessToken, refreshToken, profile, done) {
+    userProfile=profile;
+    return done(null, userProfile);
+  }
+));
 
 const localStrategyAuth = authMiddleware(passport)
 
@@ -293,16 +292,18 @@ app.post('/login',
         }
 )
 
-// app.get('/auth/google',
-//   passport.authenticate('google', { scope:
-//       [ 'email', 'profile' ] }
-// ));
+app.get('/auth/google',
+  passport.authenticate('google', { 
+    scope: [ 'email', 'profile' ],
+    session: false
+ }
+));
 
-// app.get( '/auth/google/callback',
-//     passport.authenticate( 'google', {
-//         successRedirect: '/auth/google/success',
-//         failureRedirect: '/auth/google/failure'
-// }));
+app.get( '/auth/google/callback',
+    passport.authenticate( 'google', {
+        successRedirect: '/auth/google/success',
+        failureRedirect: '/auth/google/failure'
+}));
 
 
 app.post('/signup', async(req, resp) => {

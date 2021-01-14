@@ -32,22 +32,8 @@ export class AuthenticationService implements CanActivate {
     }
 
     async signUp(userDetails: SignUp): Promise<boolean> {
-        // todo: send userDetails to backend
-        // backend uses nodemailer to send confirmation email to user
-        // db for user to include a verified field
-        // click link to set verification status to true
-        // token given in clicked link
-        // todo2: if username or email exists in db,
-        // status 409 (conflict)
-        // error message telling user to either choose a different username or saying email already exists
-
-// Your User model should have an active attribute that is false by default
-// When the user submits a valid signup form, create a new User (who's active will be false initially)
-// Create a long random string (128 characters is usually good) with a crypto library and store it in your database with a reference to the User ID
-// Send an email to the supplied email address with the hash as part of a link pointing back to a route on your server
-// When a user clicks the link and hits your route, check for the hash passed in the URL
-// If the hash exists in the database, get the related user and set their active property to true
-// Delete the hash from the database, it is no longer needed
+        // todo: 
+        // token given when clicked link and redirects to main page
 
         try {
             const resp = await this.http.post<any>(`${this.SERVER}/signup`, userDetails, { observe: 'response' })
