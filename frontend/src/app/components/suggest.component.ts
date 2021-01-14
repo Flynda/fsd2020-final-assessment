@@ -62,6 +62,7 @@ export class SuggestComponent implements OnInit {
       .then(() => {
         console.info('Book suggestion successful!')
         this.bookForm.reset()
+        this.router.navigate(['/'])
       })
       .catch(err => {
         console.error('error: ', err);

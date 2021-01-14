@@ -54,7 +54,12 @@ const pool = mysql.createPool({
     user: process.env.SQL_USER,
     password: process.env.SQL_PASSWORD,
     connectionLimit: process.env.SQL_CONNECTION_LIMIT,
-    timezone: '+08:00'
+    timezone: '+08:00',
+    connectTimeout: 20000,
+    waitForConnections: true,
+    ssl: {
+        ca: fs.readFileSync(__dirname + '/ca-certificate.crt')
+    }
 })
 
 const mkQuery = (sqlStmt, pool) => {
@@ -219,29 +224,6 @@ const checkAuth = (req, resp, next) => {
     }
 }
 
-// const testEmail = async () => {
-//     let testAccount = await nodemailer.createTestAccount();
-//     let transporter = nodemailer.createTransport({
-//         host: "smtp.ethereal.email",
-//         port: 587,
-//         secure: false, // true for 465, false for other ports
-//         auth: {
-//           user: testAccount.user, // generated ethereal user
-//           pass: testAccount.pass, // generated ethereal password
-//         },
-//       });
-//       let info = await transporter.sendMail({
-//         from: '"Fred Foo 👻" <foo@example.com>', // sender address
-//         to: "", // list of receivers
-//         subject: "Hello ✔", // Subject line
-//         text: "Hello world?", // plain text body
-//         html: "<b>Hello world?</b>", // html body
-//       });
-    
-//       console.log("Message sent: %s", info.messageId);
-//       console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
-// }
-
 const sendEmail = async(newUser, temp_hash) => {
     const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
@@ -323,7 +305,7 @@ app.post('/login',
 // }));
 
 
-app.post('/signup', async(req, resp, next) => {
+app.post('/signup', async(req, resp) => {
     const newUser = req.body
     const temp_hasher = crypto.createHmac('sha256', NEW_SECRET)
                               .update(newUser.username)
@@ -351,29 +333,7 @@ app.post('/signup', async(req, resp, next) => {
         resp.type('application/json')
         resp.json({error: err})
     }
-    // next()
     }
-    // , (req, resp) => {
-    //     // generate JWT token
-    //     const currentTime = (new Date()).getTime() / 1000
-    //     const token = jwt.sign({
-    //         sub: req.body.username,
-    //         iss: 'myapp',
-    //         ist: currentTime,
-    //         // nbf: currentTime + 30,
-    //         exp: currentTime + (60 * 60),
-    //         data: {
-    //             user: req.body.username,
-    //             // userId: req.user.userId,
-    //             user_email: req.body.email,
-    //             loginTime: currentTime
-    //         }
-    //     }, TOKEN_SECRET)
-
-    //     resp.status(200)
-    //     resp.type('application/json')
-    //     resp.json({ message: `Login in at ${new Date()}`, token})
-    // }
 )
 
 app.get('/verify', async (req, resp) => {
