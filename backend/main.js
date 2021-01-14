@@ -23,8 +23,9 @@ const NEW_SECRET = process.env.NEW_SECRET
 
 const SQL_CHECK_USER_PASSWORD = 'select id, user_id, email from user where user_id = ? and password = sha(?) and activated = 1'
 const SQL_CHECK_UNIQUE_USERNAME = `select id from user where user_id = ?`
-const SQL_CHECK_UNIQUE_EMAIL = `select id, user_id from user where email = ?`
+const SQL_CHECK_UNIQUE_EMAIL = `select id from user where email = ?`
 const SQL_ADD_NEW_USER = `insert into user (user_id, password, email, temp_hash) values (?, sha(?), ?, ?)`
+const SQL_ADD_NEW_GOOGLE_USER = `insert into user (user_id, password, email, activated) values (?, ?, ?, 1)`
 const SQL_CHECK_VERIFICATION = 'select id, user_id, email from user where user_id = ? and temp_hash = ?'
 const SQL_UPDATE_VERIFICATION = 'UPDATE user SET activated = 1, temp_hash = null WHERE (user_id = ?)'
 const SQL_GET_TITLE_LIST = 'select book_id, title from book2018 where title like ? and (user_id is null or user_id = ?) order by title asc limit ? offset ?'
@@ -93,6 +94,7 @@ const checkUniqueEmail = mkQuery(SQL_CHECK_UNIQUE_EMAIL, pool)
 const addNewUserToDB = mkQuery(SQL_ADD_NEW_USER, pool)
 const checkVerification = mkQuery(SQL_CHECK_VERIFICATION, pool)
 const updateVerification = mkQuery(SQL_UPDATE_VERIFICATION, pool)
+const addGoogleUserToDB = mkQuery(SQL_ADD_NEW_GOOGLE_USER, pool)
 
 const s3 = new AWS.S3({
     endpoint: new AWS.Endpoint(process.env.S3_HOSTNAME),
@@ -156,6 +158,29 @@ const authMiddleware = (passport) => {
     }
 }
 
+const authMiddlewareGoogle = (passport) => {
+    return (req, resp, next) => {
+        passport.authenticate('google',
+            (err, user, info) => {
+                if ((null != err)) {
+                    console.info('err? ', err)
+                    resp.status(401)
+                    resp.json({message: err})
+                    return
+                }
+                // if (null != info) {
+                //     console.info('info? ', info)
+                //     resp.status(401)
+                //     resp.json(info)
+                //     return
+                // }
+                req.user = user
+                next()
+            }
+        )  (req, resp, next)
+    }
+}
+
 passport.use(
     new LocalStrategy(
         {usernameField: 'username', passwordField: 'password', passReqToCallback: true },
@@ -187,13 +212,30 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: "http://localhost:3000/auth/google/callback"
   },
-  function(accessToken, refreshToken, profile, done) {
-    userProfile=profile;
-    return done(null, userProfile);
+  async (accessToken, refreshToken, profile, done) => {
+      console.info('profile contains: ', profile)
+    const existing = await checkUniqueEmail([profile.emails[0].value])
+    if (!!existing.length) {
+        done(null, {
+            email: profile.emails[0].value,
+            userId: existing.id,
+            loginTime: (new Date()).toString(),
+            security: 2
+        })
+    } else {
+        const newGoogleUser = await addGoogleUserToDB([profile.displayName, 'na', profile.emails[0].value])
+        return done(null, {
+            email: profile.emails[0].value,
+            userId: newGoogleUser.insertId,
+            loginTime: (new Date()).toString(),
+            security: 2
+        });
+    }
   }
 ));
 
 const localStrategyAuth = authMiddleware(passport)
+const googleStrategyAuth = authMiddlewareGoogle(passport)
 
 const checkAuth = (req, resp, next) => {
     // check if the request has Authorization header
@@ -268,8 +310,6 @@ app.post('/login',
         // passport middleware to perform login
         localStrategyAuth,
         (req, resp) => {
-            // do something
-            console.info(`user: `, req.user)
             // generate JWT token
             const currentTime = (new Date()).getTime() / 1000
             const token = jwt.sign({
@@ -300,10 +340,32 @@ app.get('/auth/google',
 ));
 
 app.get( '/auth/google/callback',
-    passport.authenticate( 'google', {
-        successRedirect: '/auth/google/success',
-        failureRedirect: '/auth/google/failure'
-}));
+    googleStrategyAuth, 
+    (req, resp) => {
+        // generate JWT token
+        const currentTime = (new Date()).getTime() / 1000
+        const token = jwt.sign({
+            sub: req.user.email,
+            iss: 'myapp',
+            ist: currentTime,
+            // nbf: currentTime + 30,
+            exp: currentTime + (60 * 60),
+            data: {
+                userId: req.user.userId,
+                user_email: req.user.email,
+                loginTime: req.user.loginTime
+            }
+        }, TOKEN_SECRET)
+        console.info('>>>point')
+        let responseHTML = '<html><head><title>Main</title></head><body></body><script>res = %value%; window.opener.postMessage(res, "*");window.close();</script></html>'
+        responseHTML = responseHTML.replace('%value%', JSON.stringify({
+            user: req.user,
+            token
+        }));
+        resp.status(200)
+        resp.send(responseHTML);
+    }
+);
 
 
 app.post('/signup', async(req, resp) => {
