@@ -42,3 +42,7 @@ export interface BookReviewDetails {
     copyright: string
     reviews: BookReview[]
 }
+
+export interface UserFavBookList extends BookList {
+    user_id: number
+}

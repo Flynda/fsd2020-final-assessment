@@ -10,6 +10,7 @@ import { AuthenticationService } from '../services/authentication.service';
 export class IndexComponent implements OnInit {
 
   btnTxt: string = "Login"
+  loginStatus: boolean = false
 
   alphabetArray = [
     ['A', 'B', 'C', 'D', 'E',],
@@ -27,8 +28,8 @@ export class IndexComponent implements OnInit {
   constructor(private router: Router, private authSvc: AuthenticationService) { }
 
   ngOnInit(): void {
-    const loginStatus = this.authSvc.isLogin()
-    if (loginStatus) {
+    this.loginStatus = this.authSvc.isLogin()
+    if (this.loginStatus) {
       this.btnTxt = "Logout"
     } else {
       this.btnTxt = "Login"

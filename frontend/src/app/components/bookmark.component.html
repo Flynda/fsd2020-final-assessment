@@ -1,4 +1,24 @@
 <nav class="d-flex justify-content-between mb-3">
-    <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+    <div class="btn-group" role="group" aria-label="Menu">
+        <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+        <div class="btn-group" role="group">
+            <button id="btnGroupDrop1" type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Menu</button>
+            <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+                <a class="dropdown-item" [routerLink]="[ '/favorites' ]">Favorites</a>
+                <a class="dropdown-item" [routerLink]="[ '/shares' ]">Community Suggestions</a>
+              </div>
+        </div>
+    </div>
     <button class="btn btn-danger" (click)="logout()">Logout</button>
 </nav>
+
+<table class="table mt-4">
+    <thead>
+        <th scope="col">My Favorites</th>
+    </thead>
+    <tbody *ngFor="let b of bookList">
+        <tr [routerLink]="[ '/book', b['book_id'] ]">
+            <td>{{b.title}}</td>
+        </tr>
+    </tbody>
+</table>

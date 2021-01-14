@@ -12,14 +12,15 @@ const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy
 const AWS = require('aws-sdk')
 const multer = require('multer')
 const fs = require('fs')
-
+const nodemailer = require("nodemailer");
 
 const PORT = parseInt(process.argv[2]) || parseInt(process.env) || 3000
 const NYT_BOOK_REVIEW_ENDPOINT = 'https://api.nytimes.com/svc/books/v3/reviews.json'
 const nytimes_apikey = process.env.NYTIMES_APIKEY || ''
 const TOKEN_SECRET = process.env.TOKEN_SECRET
 
-const SQL_CHECK_USER_PASSWORD = 'select id, user_id, email from user where user_id = ? and password = sha(?)'
+const SQL_CHECK_USER_PASSWORD = 'select id, user_id, email from user where user_id = ? and password = sha(?) and activated = 1'
+const SQL_CHECK_UNIQUE_USERNAME_EMAIL = `select id from user where user_id = ? and email = ?`
 const SQL_GET_TITLE_LIST = 'select book_id, title from book2018 where title like ? and (user_id is null or user_id = ?) order by title asc limit ? offset ?'
 const SQL_TOTAL_LIST = 'select count(*) as listCount from book2018 where title like ?'
 const SQL_GET_BOOK_DETAILS = 'select * from book2018 where book_id = ?'
@@ -29,7 +30,14 @@ const SQL_GET_LAST_BOOK_ID = ` select book_id from book2018 ORDER BY book_id DES
 const SQL_CHECK_IF_BOOK_IS_IN_USER_FAVORITES = `select id from favorites where user_id = ? and book_id = ?`
 const SQL_ADD_TO_FAVORITES = `insert into favorites (user_id, book_id) values (?, ?)`
 const SQL_REMOVE_FROM_FAVORITES = `delete from favorites where id = ?`
-const SQL_SHOW_ALL_USER_FAVORITES = ``
+const SQL_SHOW_ALL_USER_FAVORITES = `SELECT * FROM (
+	SELECT b.book_id, b.title, f.user_id
+		FROM book2018 b
+        LEFT JOIN favorites f
+        ON b.book_id = f.book_id
+	) AS my_joint
+    WHERE my_joint.user_id = ?;`
+const SQL_GET_ALL_USER_SUGGESTIONS = `select book_id, title from book2018 where user_id is not null order by title asc;`
 
 const SQL_LIMIT = 10
 
@@ -67,6 +75,9 @@ const addToSQLDb = mkQuery(SQL_ADD_TO_DATABASE, pool)
 const addToFavTable = mkQuery(SQL_ADD_TO_FAVORITES, pool)
 const checkIfFav = mkQuery(SQL_CHECK_IF_BOOK_IS_IN_USER_FAVORITES, pool)
 const deleteFromFavTable = mkQuery(SQL_REMOVE_FROM_FAVORITES, pool)
+const userFav = mkQuery(SQL_SHOW_ALL_USER_FAVORITES, pool)
+const allUserSuggestions = mkQuery(SQL_GET_ALL_USER_SUGGESTIONS, pool)
+const checkUniqueUsernameEmail = mkQuery(SQL_CHECK_UNIQUE_USERNAME_EMAIL, pool)
 
 const s3 = new AWS.S3({
     endpoint: new AWS.Endpoint(process.env.S3_HOSTNAME),
@@ -175,14 +186,14 @@ const checkAuth = (req, resp, next) => {
     const auth = req.get('Authorization')
     if (null == auth) {
         resp.status(403)
-        resp.json({ message: 'Forbidden 1' })
+        resp.json({ message: 'Forbidden' })
         return
     }
     // Bearer authorization
     const terms = auth.split(' ')
     if ((terms.length != 2) || (terms[0] != 'Bearer')) {
         resp.status(403)
-        resp.json({message: 'Forbidden 2'})
+        resp.json({message: 'Forbidden'})
         return
     }
     const token = terms[1]
@@ -193,10 +204,63 @@ const checkAuth = (req, resp, next) => {
         next()
     } catch (e) {
         resp.status(403)
-        resp.json({message: 'Incorrect token', error: e})
+        resp.json({message: 'Forbidden!', error: e})
         return
     }
 }
+
+// const testEmail = async () => {
+//     let testAccount = await nodemailer.createTestAccount();
+//     let transporter = nodemailer.createTransport({
+//         host: "smtp.ethereal.email",
+//         port: 587,
+//         secure: false, // true for 465, false for other ports
+//         auth: {
+//           user: testAccount.user, // generated ethereal user
+//           pass: testAccount.pass, // generated ethereal password
+//         },
+//       });
+//       let info = await transporter.sendMail({
+//         from: '"Fred Foo 👻" <foo@example.com>', // sender address
+//         to: "", // list of receivers
+//         subject: "Hello ✔", // Subject line
+//         text: "Hello world?", // plain text body
+//         html: "<b>Hello world?</b>", // html body
+//       });
+    
+//       console.log("Message sent: %s", info.messageId);
+//       console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+// }
+
+const sendEmail = async(newUser) => {
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.SENDER_NAME,
+            pass: process.env.SENDER_PW
+        }
+    })
+    const mailContents = {
+        from: process.env.SENDER_NAME,
+        to: newUser.email,
+        subject: 'Welcome to My Bookshelf App!',
+        html: `Thank you for creating an account with us. <br>
+        Your username is: ${newUser.username} <br>
+        <b>Why have you received this message?</b><br>
+        This mail address was used to create an account. If this account was set up in error, or if you received this message but did not create the account, please reply and the account will be deleted.`
+    }
+
+    const info = await transporter.sendMail(mailContents, (err, info) => {
+        if (err) {
+            console.error(err)
+        } else {
+            console.info('Email sent: ' + info.response)
+        }
+    })
+
+    console.log("Message sent: %s", info.messageId);
+}
+
 
 const app = express()
 app.use(morgan('combined'))
@@ -244,8 +308,22 @@ app.post('/login',
 //         failureRedirect: '/auth/google/failure'
 // }));
 
+
+app.post('/signup', async(req, resp) => {
+    const newUser = req.body
+
+    const newSignUp = await checkUniqueUsernameEmail([newUser.username, newUser.email])
+            if (newSignUp.length) {
+                resp.status(409)
+                resp.type('application/json')
+                resp.json({message: 'Username or email already exists.'})
+                return;
+            }
+
+})
+
 // Authorization: Bearer <token>
-app.post('/protected/fav', 
+app.post('/protected/addFav', 
     checkAuth,
     async (req, resp) => {
         const userId = req.token.data.userId
@@ -276,6 +354,23 @@ app.delete('/protected/removeFav',
             console.info('deleted? ', rmFav)
             resp.status(200)
             resp.json({ message: 'Deleted' })
+        } catch (err) {
+            resp.status(500)
+            resp.type('application/json')
+            resp.json({error: err})
+        }
+    }
+)
+
+app.get('/protected/userFav', 
+    checkAuth,
+    async (req, resp) => {
+        const userId = req.token.data.userId
+        try {
+            const favList = await userFav([userId])
+            console.info('fav? ', favList)
+            resp.status(200)
+            resp.json(favList)
         } catch (err) {
             resp.status(500)
             resp.type('application/json')
@@ -348,7 +443,23 @@ app.post('/protected/share',
     }
 )
 
-app.get('/list/:id', 
+app.get ('/protected/othersSuggestions',
+    checkAuth,
+    async (req, resp) => {
+        try {
+            const shareList = await allUserSuggestions([])
+            console.info('share list? ', shareList)
+            resp.status(200)
+            resp.json(shareList)
+        } catch (err) {
+            resp.status(500)
+            resp.type('application/json')
+            resp.json({error: err})
+        }
+    }
+)
+
+app.get('/protected/list/:id', 
     checkAuth,
     async(req, resp) => {
         const list_id = req.params['id']
@@ -377,7 +488,7 @@ app.get('/list/:id',
     }
 )
 
-app.get('/book/:book_id', 
+app.get('/protected/book/:book_id', 
     checkAuth, 
     async(req, resp) => {
         const book_id = req.params['book_id']

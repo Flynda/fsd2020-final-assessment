@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { ActivatedRouteSnapshot, CanActivate, Router, RouterStateSnapshot } from "@angular/router";
-import { BookDetails, BookPages, BookResult } from "../models/book.model";
+import { BookDetails, BookList, BookPages, BookResult, UserFavBookList } from "../models/book.model";
 import { Login, SignUp } from "../models/login.model";
 
 @Injectable()
@@ -32,10 +32,19 @@ export class AuthenticationService implements CanActivate {
     }
 
     async signUp(userDetails: SignUp): Promise<boolean> {
+        // todo: send userDetails to backend
+        // backend uses nodemailer to send confirmation email to user
+        // db for user to include a verified field
+        // click link to set verification status to true
+        // token given in clicked link
+        // todo2: if username or email exists in db,
+        // status 409 (conflict)
+        // error message telling user to either choose a different username or saying email already exists
         try {
             const resp = await this.http.post<any>(`${this.SERVER}/signup`, userDetails, { observe: 'response' })
                 .toPromise();
             if (resp.status == 202) {
+                // this.token = resp.body.token;
                 this.errorMessage = '';
             }
             return true;
@@ -89,7 +98,7 @@ export class AuthenticationService implements CanActivate {
                         .set('Accept', 'application/json')
                         .set('Authorization', `Bearer ${this.token}`)
         try {
-            const results = await this.http.get<BookResult>(`${this.SERVER}/list/${param.toLowerCase()}`, {params: queryString, headers})
+            const results = await this.http.get<BookResult>(`${this.SERVER}/protected/list/${param.toLowerCase()}`, {params: queryString, headers})
                         .toPromise()
             return {
                 results: results,
@@ -106,7 +115,7 @@ export class AuthenticationService implements CanActivate {
                         .set('Accept', 'application/json')
                         .set('Authorization', `Bearer ${this.token}`)
         try {
-            return await this.http.get<BookDetails>(`${this.SERVER}/book/${book_id}`, {headers})
+            return await this.http.get<BookDetails>(`${this.SERVER}/protected/book/${book_id}`, {headers})
                     .toPromise()    
         } catch (err) {
             console.error(err)    
@@ -118,7 +127,7 @@ export class AuthenticationService implements CanActivate {
                         .set('Accept', 'application/json')
                         .set('Authorization', `Bearer ${this.token}`)
         try {
-            return await this.http.post(`${this.SERVER}/protected/fav`, {bookId: bookId}, {headers})
+            return await this.http.post(`${this.SERVER}/protected/addFav`, {bookId: bookId}, {headers})
                     .toPromise()
         } catch (err) {
             console.error(err)
@@ -136,6 +145,30 @@ export class AuthenticationService implements CanActivate {
                     .toPromise()
         } catch (err) {
             console.error(err)
+        }
+    }
+
+    async getUserFavorites(): Promise<UserFavBookList[]> {
+        const headers = (new HttpHeaders())
+                        .set('Accept', 'application/json')
+                        .set('Authorization', `Bearer ${this.token}`)
+        try {
+            return await this.http.get<UserFavBookList[]>(`${this.SERVER}/protected/userFav`, {headers})
+                    .toPromise()    
+        } catch (err) {
+            console.error(err)    
+        }
+    }
+
+    async getOthersSuggestions(): Promise<BookList[]> {
+        const headers = (new HttpHeaders())
+                        .set('Accept', 'application/json')
+                        .set('Authorization', `Bearer ${this.token}`)
+        try {
+            return await this.http.get<BookList[]>(`${this.SERVER}/protected/othersSuggestions`, {headers})
+                    .toPromise()    
+        } catch (err) {
+            console.error(err)    
         }
     }
 }

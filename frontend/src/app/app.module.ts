@@ -19,6 +19,7 @@ import { SuggestComponent } from './components/suggest.component';
 import { CanLeaveService } from './services/can-leave.service';
 import { SignupComponent } from './components/signup.component';
 import { ProfileComponent } from './components/profile.component';
+import { CommunitySuggestionsComponent } from './components/community-suggestions.component';
 
 
 
@@ -43,6 +44,10 @@ const routes: Routes = [
     canActivate: [AuthenticationService],
     canDeactivate: [CanLeaveService]
   },
+  {
+    path: 'shares', component: CommunitySuggestionsComponent,
+    canActivate: [AuthenticationService]
+  },
   { path: 'forbidden', component: ErrorComponent },
   { path: '**', redirectTo: '/', pathMatch: 'full'}
 ]
@@ -59,7 +64,8 @@ const routes: Routes = [
     ErrorComponent,
     SuggestComponent,
     SignupComponent,
-    ProfileComponent
+    ProfileComponent,
+    CommunitySuggestionsComponent
   ],
   imports: [
     BrowserModule,

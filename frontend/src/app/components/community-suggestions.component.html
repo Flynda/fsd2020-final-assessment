@@ -12,28 +12,13 @@
     <button class="btn btn-danger" (click)="logout()">Logout</button>
 </nav>
 
-<ng-container *ngIf="hasReview; else elseTemplate">
-    <div *ngFor="let rev of book_review">
-        <h3 class="mt-3">
-            {{rev.title}}
-        </h3>
-        by <i>{{rev.author}}</i>
-        <br>
-        Reviewer: <i>{{rev.reviewer}}</i>
-        <br>
-        Date: <i>{{rev.review_date}}</i>
-        <br>
-        {{rev.summary}}
-        <br>
-        <a href="{{rev.link}}">Full Review</a>
-        <br>
-    </div>
-    <footer class="mt-5">
-        <i>
-            {{copyright}}
-        </i>
-    </footer>
-</ng-container>
-<ng-template #elseTemplate>
-    <h4>Sorry, no reviews were found.</h4>
-</ng-template>
+<table class="table mt-4">
+    <thead>
+        <th scope="col">Community Suggestions</th>
+    </thead>
+    <tbody *ngFor="let b of bookList">
+        <tr [routerLink]="[ '/book', b['book_id'] ]">
+            <td>{{b.title}}</td>
+        </tr>
+    </tbody>
+</table>

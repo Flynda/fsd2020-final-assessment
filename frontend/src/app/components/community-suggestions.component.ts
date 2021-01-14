@@ -1,21 +1,21 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { UserFavBookList } from '../models/book.model';
+import { BookList } from '../models/book.model';
 import { AuthenticationService } from '../services/authentication.service';
 
 @Component({
-  selector: 'app-bookmark',
-  templateUrl: './bookmark.component.html',
-  styleUrls: ['./bookmark.component.css']
+  selector: 'app-community-suggestions',
+  templateUrl: './community-suggestions.component.html',
+  styleUrls: ['./community-suggestions.component.css']
 })
-export class BookmarkComponent implements OnInit {
+export class CommunitySuggestionsComponent implements OnInit {
 
-  bookList: UserFavBookList[] = []
+  bookList: BookList[] = []
 
   constructor(private authSvc: AuthenticationService, private router: Router) { }
 
   ngOnInit(): void {
-    this.authSvc.getUserFavorites()
+    this.authSvc.getOthersSuggestions()
       .then(r => {
         this.bookList = r
       })

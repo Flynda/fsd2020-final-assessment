@@ -1,5 +1,12 @@
-<nav class="d-flex justify-content-end mb-3">
-    <!-- <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button> -->
+<nav class="d-flex justify-content-between mb-3">
+    <div class="btn-group" role="group" *ngIf="loginStatus" aria-label="Menu">
+        <button id="btnGroupDrop1" type="button" class="btn btn-outline-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Menu</button>
+        <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+            <a class="dropdown-item" [routerLink]="[ '/favorites' ]">Favorites</a>
+            <a class="dropdown-item" [routerLink]="[ '/shares' ]">Community Suggestions</a>
+        </div>
+    </div>
+    
     <button class="btn btn-outline-primary" (click)="toggleBtn()" [innerHTML]="btnTxt"></button>
 </nav>
 
