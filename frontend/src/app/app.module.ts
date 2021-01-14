@@ -20,6 +20,7 @@ import { CanLeaveService } from './services/can-leave.service';
 import { SignupComponent } from './components/signup.component';
 import { ProfileComponent } from './components/profile.component';
 import { CommunitySuggestionsComponent } from './components/community-suggestions.component';
+import { NewSignupComponent } from './components/new-signup.component';
 
 
 
@@ -27,6 +28,7 @@ const routes: Routes = [
   { path: '', component: IndexComponent },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
+  { path: 'newsignup', component: NewSignupComponent },
   { path: 'list/:id', component: ListComponent,
     canActivate: [AuthenticationService]
   },
@@ -65,7 +67,8 @@ const routes: Routes = [
     SuggestComponent,
     SignupComponent,
     ProfileComponent,
-    CommunitySuggestionsComponent
+    CommunitySuggestionsComponent,
+    NewSignupComponent
   ],
   imports: [
     BrowserModule,

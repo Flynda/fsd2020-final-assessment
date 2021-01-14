@@ -29,6 +29,7 @@ export class SignupComponent implements OnInit {
       this.errorMessage = 'Please check your password is repeated correctly.'
       console.error(this.errorMessage)
     }
+    this.errorMessage = ''
     const signupDetails: SignUp = {
       username: this.signupForm.get('username').value.toLowerCase(),
       password: this.signupForm.get('password').value,
@@ -36,11 +37,11 @@ export class SignupComponent implements OnInit {
     }
     this.authSvc.signUp(signupDetails)
       .then(result => {
-        // console.info('login result', result)
         if (result) {
-          this.router.navigate(['/'])
+          this.router.navigate(['/newsignup'])
         } else {
           this.errorMessage = this.authSvc.errorMessage
+          console.error('Did this error message work?: ', this.errorMessage)
         }
       })
       .catch(err => {

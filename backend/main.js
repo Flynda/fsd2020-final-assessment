@@ -13,15 +13,20 @@ const AWS = require('aws-sdk')
 const multer = require('multer')
 const fs = require('fs')
 const nodemailer = require("nodemailer");
+const crypto = require('crypto')
 
 const PORT = parseInt(process.argv[2]) || parseInt(process.env) || 3000
 const NYT_BOOK_REVIEW_ENDPOINT = 'https://api.nytimes.com/svc/books/v3/reviews.json'
 const nytimes_apikey = process.env.NYTIMES_APIKEY || ''
 const TOKEN_SECRET = process.env.TOKEN_SECRET
+const NEW_SECRET = process.env.NEW_SECRET
 
 const SQL_CHECK_USER_PASSWORD = 'select id, user_id, email from user where user_id = ? and password = sha(?) and activated = 1'
 const SQL_CHECK_UNIQUE_USERNAME = `select id from user where user_id = ?`
 const SQL_CHECK_UNIQUE_EMAIL = `select id from user where email = ?`
+const SQL_ADD_NEW_USER = `insert into user (user_id, password, email, temp_hash) values (?, sha(?), ?, ?)`
+const SQL_CHECK_VERIFICATION = 'select id, user_id, email from user where user_id = ? and temp_hash = ?'
+const SQL_UPDATE_VERIFICATION = 'UPDATE user SET activated = 1, temp_hash = null WHERE (user_id = ?)'
 const SQL_GET_TITLE_LIST = 'select book_id, title from book2018 where title like ? and (user_id is null or user_id = ?) order by title asc limit ? offset ?'
 const SQL_TOTAL_LIST = 'select count(*) as listCount from book2018 where title like ?'
 const SQL_GET_BOOK_DETAILS = 'select * from book2018 where book_id = ?'
@@ -80,6 +85,9 @@ const userFav = mkQuery(SQL_SHOW_ALL_USER_FAVORITES, pool)
 const allUserSuggestions = mkQuery(SQL_GET_ALL_USER_SUGGESTIONS, pool)
 const checkUniqueUsername = mkQuery(SQL_CHECK_UNIQUE_USERNAME, pool)
 const checkUniqueEmail = mkQuery(SQL_CHECK_UNIQUE_EMAIL, pool)
+const addNewUserToDB = mkQuery(SQL_ADD_NEW_USER, pool)
+const checkVerification = mkQuery(SQL_CHECK_VERIFICATION, pool)
+const updateVerification = mkQuery(SQL_UPDATE_VERIFICATION, pool)
 
 const s3 = new AWS.S3({
     endpoint: new AWS.Endpoint(process.env.S3_HOSTNAME),
@@ -234,7 +242,7 @@ const checkAuth = (req, resp, next) => {
 //       console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
 // }
 
-const sendEmail = async(newUser) => {
+const sendEmail = async(newUser, temp_hash) => {
     const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
@@ -249,7 +257,11 @@ const sendEmail = async(newUser) => {
         to: newUser.email,
         subject: 'Welcome to My Bookshelf App!',
         html: `Thank you for creating an account with us. <br>
-        Your username is: ${newUser.username} <br>
+        <p>Your username is: ${newUser.username} </p><br>
+        <p>Please click <a href="http://localhost:3000/verify?u=${newUser.username}&h=${temp_hash}" target="_blank">here</a> to verify your email.</p>
+        <p>Alternatively, copy the link below and paste it in your browser:<br>
+        http://localhost:3000/verify?u=${newUser.username}&h=${temp_hash}
+        </p>
         <b>Why have you received this message?</b><br>
         This mail address was used to create an account. If this account was set up in error, or if you received this message but did not create the account, please reply and the account will be deleted.`
     }
@@ -313,44 +325,80 @@ app.post('/login',
 
 app.post('/signup', async(req, resp, next) => {
     const newUser = req.body
-
-    const userCheck = await checkUniqueUsername([newUser.username])
-    const emailCheck = await checkUniqueEmail([newUser.email])
-    console.info('new signup?', userCheck)
-    console.info('new signup?', emailCheck)
-        if (!!userCheck.length || !!emailCheck.length) {
-            resp.status(409)
-            resp.type('application/json')
-            resp.json({message: 'Username or email already exists.'})
-            return;
-        }
-    sendEmail(newUser)
-    // resp.status(202)
-    // resp.type('application/json')
-    // resp.json({message: 'Check email'})
-    next()
-    }, (req, resp) => {
-        // generate JWT token
-        const currentTime = (new Date()).getTime() / 1000
-        const token = jwt.sign({
-            sub: req.body.username,
-            iss: 'myapp',
-            ist: currentTime,
-            // nbf: currentTime + 30,
-            exp: currentTime + (60 * 60),
-            data: {
-                user: req.body.username,
-                // userId: req.user.userId,
-                user_email: req.body.email,
-                loginTime: currentTime
+    const temp_hasher = crypto.createHmac('sha256', NEW_SECRET)
+                              .update(newUser.username)
+                              .digest('hex')
+    try {
+        const userCheck = await checkUniqueUsername([newUser.username])
+        const emailCheck = await checkUniqueEmail([newUser.email])
+        console.info('new signup?', userCheck)
+        console.info('new signup?', emailCheck)
+            if (!!userCheck.length || !!emailCheck.length) {
+                resp.status(409)
+                resp.type('application/json')
+                resp.json({message: 'Username or email already exists.'})
+                return;
             }
-        }, TOKEN_SECRET)
-
-        resp.status(200)
+        sendEmail(newUser, temp_hasher)
+        console.info('>>>>>')
+        const addNewUser = await addNewUserToDB([newUser.username, newUser.password, newUser.email, temp_hasher])
+        console.info('add new user? ', addNewUser)
+        resp.status(202)
         resp.type('application/json')
-        resp.json({ message: `Login in at ${new Date()}`, token})
+        resp.json({message: 'Check email'})
+    } catch (err) {
+        resp.status(500)
+        resp.type('application/json')
+        resp.json({error: err})
     }
+    // next()
+    }
+    // , (req, resp) => {
+    //     // generate JWT token
+    //     const currentTime = (new Date()).getTime() / 1000
+    //     const token = jwt.sign({
+    //         sub: req.body.username,
+    //         iss: 'myapp',
+    //         ist: currentTime,
+    //         // nbf: currentTime + 30,
+    //         exp: currentTime + (60 * 60),
+    //         data: {
+    //             user: req.body.username,
+    //             // userId: req.user.userId,
+    //             user_email: req.body.email,
+    //             loginTime: currentTime
+    //         }
+    //     }, TOKEN_SECRET)
+
+    //     resp.status(200)
+    //     resp.type('application/json')
+    //     resp.json({ message: `Login in at ${new Date()}`, token})
+    // }
 )
+
+app.get('/verify', async (req, resp) => {
+    const user = req.query['u'].toString()
+    const temp_hash = req.query['h']
+    try {
+        const results = await checkVerification([user, temp_hash])
+        console.info('>>results: ', results)
+        if (!results.length) {
+            resp.status(400)
+            resp.type('application/json')
+            resp.json({message: 'The link either does not exist or has expired.'})
+            return
+        }
+        const results2 = await updateVerification([user])
+        console.info(results2)
+        resp.status(200)
+        resp.type('text/html')
+        resp.send(`Verification has succeeded. Please <a href="http://localhost:4200">log in</a>.`)
+    } catch (err) {
+        resp.status(500)
+        resp.type('application/json')
+        resp.json({error: err})
+    }
+})
 
 // Authorization: Bearer <token>
 app.post('/protected/addFav', 
