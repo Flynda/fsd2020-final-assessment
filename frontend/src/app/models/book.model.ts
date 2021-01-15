@@ -46,3 +46,8 @@ export interface BookReviewDetails {
 export interface UserFavBookList extends BookList {
     user_id: number
 }
+
+export interface UserReview {
+    bookId: string
+    review: string
+}

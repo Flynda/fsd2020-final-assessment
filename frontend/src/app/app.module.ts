@@ -21,6 +21,7 @@ import { SignupComponent } from './components/signup.component';
 import { ProfileComponent } from './components/profile.component';
 import { CommunitySuggestionsComponent } from './components/community-suggestions.component';
 import { NewSignupComponent } from './components/new-signup.component';
+import { UserReviewsComponent } from './components/user-reviews.component';
 
 
 
@@ -50,6 +51,11 @@ const routes: Routes = [
     path: 'shares', component: CommunitySuggestionsComponent,
     canActivate: [AuthenticationService]
   },
+  {
+    path: 'addreview/:book_id', component: UserReviewsComponent,
+    canActivate: [AuthenticationService],
+    canDeactivate: [CanLeaveService]
+  },
   { path: 'forbidden', component: ErrorComponent },
   { path: '**', redirectTo: '/', pathMatch: 'full'}
 ]
@@ -68,7 +74,8 @@ const routes: Routes = [
     SignupComponent,
     ProfileComponent,
     CommunitySuggestionsComponent,
-    NewSignupComponent
+    NewSignupComponent,
+    UserReviewsComponent
   ],
   imports: [
     BrowserModule,

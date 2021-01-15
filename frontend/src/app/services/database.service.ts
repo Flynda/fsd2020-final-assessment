@@ -6,8 +6,9 @@ import { AuthenticationService } from "./authentication.service";
 @Injectable()
 export class DatabaseService{
 
-    // SERVER: string = 'http://localhost:3000'
-    SERVER: string = '/'
+    SERVER: string = 'http://localhost:3000'
+    // SERVER: string = '/'
+    bookId: string
 
     constructor(private http: HttpClient) { }
 
@@ -40,8 +41,11 @@ export class DatabaseService{
     // }
 
     async getBookReviews(title: string): Promise<BookReviewDetails> {
+        const params = (new HttpParams())
+                        .set('title', title)
+                        .set('book_id', this.bookId)
         try {
-            return await this.http.get<BookReviewDetails>(`${this.SERVER}/review/${title}`)
+            return await this.http.get<BookReviewDetails>(`${this.SERVER}/review`, {params})
                     .toPromise()        
         } catch (err) {
             console.error(err)

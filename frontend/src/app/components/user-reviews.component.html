@@ -1,0 +1,25 @@
+<nav class="d-flex justify-content-between mb-3">
+    <div class="btn-group" role="group" aria-label="Menu">
+        <button class="btn btn-warning" [routerLink]="[ '/' ]">Home</button>
+        <div class="btn-group" role="group">
+            <button id="btnGroupDrop1" type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Menu</button>
+            <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+                <a class="dropdown-item" [routerLink]="[ '/favorites' ]">Favorites</a>
+                <a class="dropdown-item" [routerLink]="[ '/shares' ]">Community Suggestions</a>
+              </div>
+        </div>
+    </div>
+    <button class="btn btn-danger" (click)="logout()">Logout</button>
+</nav>
+
+<h2>Review a Book</h2>
+
+<form [formGroup]="reviewForm" (ngSubmit)="review()">
+    <div class="form-group">
+        <label for="review">Review:</label>
+        <textarea formControlName="review" id="review" rows="10" class="form-control" placeholder="My Review"></textarea>
+    </div>
+    <div class="d-flex justify-content-end">
+        <button type="submit" [disabled]="reviewForm.invalid" class="btn btn-lg btn-success mt-3">Review!</button>
+    </div>
+</form>

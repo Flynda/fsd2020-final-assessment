@@ -23,7 +23,7 @@ const NEW_SECRET = process.env.NEW_SECRET
 
 const SQL_CHECK_USER_PASSWORD = 'select id, user_id, email from user where user_id = ? and password = sha(?) and activated = 1'
 const SQL_CHECK_UNIQUE_USERNAME = `select id from user where user_id = ?`
-const SQL_CHECK_UNIQUE_EMAIL = `select id from user where email = ?`
+const SQL_CHECK_UNIQUE_EMAIL = `select id, user_id from user where email = ?`
 const SQL_ADD_NEW_USER = `insert into user (user_id, password, email, temp_hash) values (?, sha(?), ?, ?)`
 const SQL_ADD_NEW_GOOGLE_USER = `insert into user (user_id, password, email, activated) values (?, ?, ?, 1)`
 const SQL_CHECK_VERIFICATION = 'select id, user_id, email from user where user_id = ? and temp_hash = ?'
@@ -45,6 +45,14 @@ const SQL_SHOW_ALL_USER_FAVORITES = `SELECT * FROM (
 	) AS my_joint
     WHERE my_joint.user_id = ?;`
 const SQL_GET_ALL_USER_SUGGESTIONS = `select book_id, title from book2018 where user_id is not null order by title asc;`
+const SQL_POST_REVIEW = `insert into reviews (user_id, book_id, review, review_date) values (?, ?, ?, ?)`
+const SQL_GET_USER_REVIEWS = `SELECT * FROM (
+	SELECT b.book_id, b.title, b.authors, r.user_id, r.review, r.review_date
+		FROM book2018 b
+        LEFT JOIN reviews r
+        ON b.book_id = r.book_id
+	) AS my_rev_joint
+    WHERE my_rev_joint.book_id = ?`
 
 const SQL_LIMIT = 10
 
@@ -95,6 +103,8 @@ const addNewUserToDB = mkQuery(SQL_ADD_NEW_USER, pool)
 const checkVerification = mkQuery(SQL_CHECK_VERIFICATION, pool)
 const updateVerification = mkQuery(SQL_UPDATE_VERIFICATION, pool)
 const addGoogleUserToDB = mkQuery(SQL_ADD_NEW_GOOGLE_USER, pool)
+const postUserReview = mkQuery(SQL_POST_REVIEW, pool)
+const getUserReviews = mkQuery(SQL_GET_USER_REVIEWS, pool)
 
 const s3 = new AWS.S3({
     endpoint: new AWS.Endpoint(process.env.S3_HOSTNAME),
@@ -217,6 +227,7 @@ passport.use(new GoogleStrategy({
     const existing = await checkUniqueEmail([profile.emails[0].value])
     if (!!existing.length) {
         done(null, {
+            username: existing.user_id,
             email: profile.emails[0].value,
             userId: existing.id,
             loginTime: (new Date()).toString(),
@@ -225,6 +236,7 @@ passport.use(new GoogleStrategy({
     } else {
         const newGoogleUser = await addGoogleUserToDB([profile.displayName, 'na', profile.emails[0].value])
         return done(null, {
+            username: profile.displayName,
             email: profile.emails[0].value,
             userId: newGoogleUser.insertId,
             loginTime: (new Date()).toString(),
@@ -267,7 +279,7 @@ const checkAuth = (req, resp, next) => {
 
 const sendEmail = async(newUser, temp_hash) => {
     const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
+        host: process.env.SENDER_HOST,
         port: 465,
         secure: true,
         auth: {
@@ -351,6 +363,7 @@ app.get( '/auth/google/callback',
             // nbf: currentTime + 30,
             exp: currentTime + (60 * 60),
             data: {
+                user: req.user.username,
                 userId: req.user.userId,
                 user_email: req.user.email,
                 loginTime: req.user.loginTime
@@ -530,7 +543,7 @@ app.post('/protected/share',
             console.info('add? ', add)
             await conn.commit()
             resp.status(200)
-            resp.json({meaning_of_life: 42})
+            resp.json({})
         } catch (e) {
             console.error(e);
             conn.rollback()
@@ -633,8 +646,9 @@ app.get('/protected/book/:book_id',
     }
 )
 
-app.get('/review/:title', async (req, resp) => {
-    const title = req.params['title']
+app.get('/review', async (req, resp) => {
+    const title = req.query['title']
+    const book_id = req.query['book_id']
     const url = withQuery(
         NYT_BOOK_REVIEW_ENDPOINT,
         {
@@ -658,12 +672,27 @@ app.get('/review/:title', async (req, resp) => {
                 }
             }
         )
-        console.info(results)
+        const more_reviews = await getUserReviews([book_id])
+        console.info('more reviews? ', more_reviews)
+        more_reviews.map(review => {
+            const user_rev = {
+                title: review.title,
+                author: review.authors,
+                reviewer: review.user_id,
+                review_date: review.review_date,
+                summary: review.review,
+                link: ''
+            }
+            console.info('user rev: ', user_rev)
+            reviews.push(user_rev)
+        })
+        // b.book_id, b.title, b.authors, r.user_id, r.review, r.review_date
+        console.info(reviews)
         resp.status(200)
         resp.type('application/json')
         resp.json({
-            hasReview: !!results.num_results,
-            copyright:results.copyright,
+            hasReview: !!reviews.length,
+            copyright: !!results.num_results ? results.copyright : '',
             reviews: reviews
         })
     } catch (e) {
@@ -673,6 +702,24 @@ app.get('/review/:title', async (req, resp) => {
         resp.json({error: e})
     }
 })
+
+app.post('/protected/review', 
+    checkAuth,
+    async (req, resp) => {
+        console.info(new Date().toLocaleDateString("en-SG").split("/"))
+        let [date, month, year] = new Date().toLocaleDateString("en-SG").split("/")
+        const username = req.token.data.user
+        const book_id = req.body.bookId
+        const review = req.body.review
+        const review_date = year + '-' + month + '-' + date
+        await postUserReview([username, book_id, review, review_date])
+        console.info('post review successful~')
+        resp.status(200)
+        resp.type('application/json')
+        resp.json({})
+
+    }
+)
 
 app.use(express.static(__dirname + '/frontend'))
 

@@ -1,13 +1,13 @@
 import { HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { ActivatedRouteSnapshot, CanActivate, Router, RouterStateSnapshot } from "@angular/router";
-import { BookDetails, BookList, BookPages, BookResult, UserFavBookList } from "../models/book.model";
+import { BookDetails, BookList, BookPages, BookResult, UserFavBookList, UserReview } from "../models/book.model";
 import { Login, SignUp } from "../models/login.model";
 
 @Injectable()
 export class AuthenticationService implements CanActivate {
-    SERVER: string = '/'
-    // SERVER = 'http://localhost:3000'
+    // SERVER: string = '/'
+    SERVER = 'http://localhost:3000'
     private token = ''
     errorMessage: string = ''
     url;
@@ -172,6 +172,18 @@ export class AuthenticationService implements CanActivate {
                     .toPromise()    
         } catch (err) {
             console.error(err)    
+        }
+    }
+
+    reviewABook(formData: UserReview): Promise<any> {
+        const headers = (new HttpHeaders())
+                        .set('Accept', 'application/json')
+                        .set('Authorization', `Bearer ${this.token}`)
+        try {
+            return this.http.post<any>(`${this.SERVER}/protected/review`, formData, {headers})
+                .toPromise()
+        } catch (err) {
+            console.error(err)
         }
     }
 }

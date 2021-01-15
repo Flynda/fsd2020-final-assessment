@@ -26,6 +26,7 @@ export class BookComponent implements OnInit, OnDestroy {
         console.info('fav? ', this.book_details.fav)
         this.favState = this.book_details.fav
         this.btnTxtState()
+        this.dbSvc.bookId = this.book_id
       })
       .catch(e => console.error(e))
   }
